@@ -5,22 +5,25 @@
 
 #include "vswitch.hpp"
 
+using std::cout;
+using std::tuple;
+using std::string;
+
+enum struct department = { creative, engineering, hr };
+
+using employee = tuple<string, string, department>;
+
+void 
+
 int main(int argc, char *argv[])
 {
- using std::cout;
- using std::string;
-
- using namespace vswitch;
-
  if(2 != argc)
   {
     cout << "Usage: " << argv[0] << " red|crimson|vermillion|blue|azure|cerulian|yellow\n";
     return 0;
   }
 
- enum struct colors { red, blue, yellow, unknown };
-
- colors color = vswitch_t<colors, string>(argv[1])
+ colors color = vswitch<colors, string>(argv[1])
     .result(colors::red, "red", "crimson", "vermillion")
     .result(colors::blue, "blue", "azure", "cerulian")
     .result(colors::yellow, "yellow", "gold")

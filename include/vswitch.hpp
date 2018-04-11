@@ -1,69 +1,100 @@
-#ifndef TSWITCH_HPP_2018
- #define TSWITCH_HPP_2018
+#ifndef VSWITCH_HPP_2019
+ #define VSWITCH_HPP_2019
 
 /* 
-Call a function based on comparison.
+Generate nested switches.
 
 Inspired by LLVM's StringSwitch. 
+
+Author: Jesse Williamson
 */
 
 #include <utility>
 #include <cassert>
 #include <optional>
 #include <algorithm>
+#include <exception>
+#include <string_view>
 
-template <typename T, typename U, typename ResultT = T>
-struct vswitch
+// Some helpers for expected situations-- users can add more types into this
+// namespace:
+namespace vswitch::comparitors {
+
+// Note that we can't rely on operator overloads for non-type classes, so we
+// map them:
+template <typename LHS, typename RHS>
+bool compare(const LHS& lhs, const RHS& rhs)
 {
- const U& match;
+ return lhs == rhs;
+}
 
- std::optional<T> result;
+template <typename LHS, typename RHS>
+bool compare(const LHS&& lhs, const RHS&& rhs)
+{
+ return lhs == rhs;
+}
+
+// An understandably common use-case:
+bool compare(const char *lhs, const char *rhs)
+{
+ return compare(std::string_view(lhs), std::string_view(rhs));
+}
+
+} // namespace vswitch::comparitors
+
+namespace vswitch {
+
+template <typename ResultT, typename MatchT>
+struct vswitch_t
+{
+ const MatchT match;
+
+ std::optional<ResultT> result_value;
 
  private:
- vswitch(const vswitch&)        = delete;
- void operator=(const vswitch&) = delete;
+ vswitch_t(const vswitch_t&)      = delete;
+ void operator=(const vswitch_t&) = delete;
 
  public:
- explicit vswitch(const U& match_)
+ explicit vswitch_t(const MatchT& match_)
   : match(match_)
  {}
 
- vswitch(vswitch&& rhs)            = default;
- vswitch& operator=(vswitch&& rhs) = default;
+ vswitch_t(vswitch_t&& rhs)            = default;
+ vswitch_t& operator=(vswitch_t&& rhs) = default;
 
  public:
  template <typename ComparitorT>
- vswitch& caseof(const T value, const ComparitorT& comparitor)
+ vswitch_t& result(const ResultT& value, const ComparitorT& comparitor)
  {
-    if(!result && match == comparitor)
-     result = std::move(value);
+    if(vswitch::comparitors::compare(match, comparitor))
+     result_value = value;
 
     return *this;
  }
 
- template <typename ValueT, typename ComparitorT, typename ...ComparitorTS>
- vswitch& caseof(ValueT value, const ComparitorT& comparitor, const ComparitorTS& ...comparitors)
+ template <typename ComparitorT, typename ...ComparitorTS>
+ vswitch_t& result(const ResultT& value, const ComparitorT& comparitor, const ComparitorTS& ...comparitors)
  {
-    if(!result && match == comparitor)
-     {
-        result = std::move(value);
-        return *this;
-     }
-
-    return caseof(value, comparitors...); 
+	return vswitch::comparitors::compare(match, comparitor) 
+			? (result_value = value, *this) 
+			: result(value, comparitors...);
  }
 
- ResultT defaultas(const T value)
+ ResultT defaultas(const ResultT& value)
  {
-    return result ? std::move(*result) : value;
+    return result_value ? *result_value : value;
  }
 
- operator ResultT()
+ ResultT nodefault()
  {
-    // The runtime assertion is unfortunate, but I see no obvious way around it:
-    assert(1 && "oops! went past the end of a value-switch");
-    return ResultT();
+	if(!result_value)
+     throw std::range_error("no match");
+
+    return *result_value;
  }
 };
+
+} // namespace vswitch
 
 #endif
