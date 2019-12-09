@@ -8,5 +8,6 @@ CXX=g++ -std=c++17
 CXX_CC=$(CXX) $(CXX_FLAGS) $(CXX_INC)
 
 all:
-	$(CXX_CC) -o example0 example0.cpp
-	$(CXX_CC) -o example1 example1.cpp
+	$(CXX_CC) -o basic-switch basic-switch.cpp
+	$(CXX_CC) -o nodefault-switch nodefault-switch.cpp
+	$(CXX_CC) -o user-defined-switch user-defined-switch.cpp

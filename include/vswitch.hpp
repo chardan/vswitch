@@ -16,31 +16,29 @@ Author: Jesse Williamson
 #include <exception>
 #include <string_view>
 
-// Some helpers for expected situations-- users can add more types into this
-// namespace:
-namespace vswitch::comparitors {
+namespace vswitch::detail::comparitors {
 
 // Note that we can't rely on operator overloads for non-type classes, so we
 // map them:
 template <typename LHS, typename RHS>
-bool compare(const LHS& lhs, const RHS& rhs)
+bool eq(const LHS& lhs, const RHS& rhs)
 {
  return lhs == rhs;
 }
 
 template <typename LHS, typename RHS>
-bool compare(const LHS&& lhs, const RHS&& rhs)
+bool eq(const LHS&& lhs, const RHS&& rhs)
 {
  return lhs == rhs;
 }
 
-// An understandably common use-case:
-bool compare(const char *lhs, const char *rhs)
+// An understandably common non-class use-case:
+bool eq(const char *lhs, const char *rhs)
 {
- return compare(std::string_view(lhs), std::string_view(rhs));
+ return eq(std::string_view(lhs), std::string_view(rhs));
 }
 
-} // namespace vswitch::comparitors
+} // namespace vswitch::detail::comparitors
 
 namespace vswitch {
 
@@ -64,19 +62,18 @@ struct vswitch_t
  vswitch_t& operator=(vswitch_t&& rhs) = default;
 
  public:
- template <typename ComparitorT>
- vswitch_t& result(const ResultT& value, const ComparitorT& comparitor)
+ vswitch_t& result(const ResultT& value, const MatchT& comparitor)
  {
-    if(vswitch::comparitors::compare(match, comparitor))
+    if(vswitch::detail::comparitors::eq(match, comparitor))
      result_value = value;
 
     return *this;
  }
 
- template <typename ComparitorT, typename ...ComparitorTS>
- vswitch_t& result(const ResultT& value, const ComparitorT& comparitor, const ComparitorTS& ...comparitors)
+ template <typename ...ComparitorTS>
+ vswitch_t& result(const ResultT& value, const MatchT& comparitor, const ComparitorTS& ...comparitors)
  {
-	return vswitch::comparitors::compare(match, comparitor) 
+	return vswitch::detail::comparitors::eq(match, comparitor) 
 			? (result_value = value, *this) 
 			: result(value, comparitors...);
  }
